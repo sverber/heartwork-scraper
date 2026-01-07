@@ -1,16 +1,41 @@
-import sys
+from pathlib import Path
 
 from scraper.config.base import ScraperConfig
 from scraper.config.category import CategoryListSelectors, CategoryConfig, CategoryProcessors
 from scraper.config.product import ProductListSelectors, ProductDetailSelectors, ProductProcessors, ProductConfig
 from scraper.configurable_scraper import ConfigurableScraper
+from scraper.sites.epifanes_attributes import EpifanesAttributeExtractor
+from scraper.sites.epifanes_files import EpifanesFileExtractor
 
+
+def run_one(site_key: str, selected: dict):
+    print(f"Scraping site: {site_key}")
+
+    scraper = ConfigurableScraper(
+        base_url=selected["base_url"],
+        config=selected["config"],
+        attribute_extractor=selected.get("attribute_extractor"),
+        file_extractor=selected.get("file_extractor"),
+        headless=True,
+    )
+
+    root_category = scraper.scrape()
+
+    output_dir = Path("output")
+    output_dir.mkdir(exist_ok=True)
+
+    output_file = output_dir / f"output_{site_key}.json"
+    output_file.write_text(root_category.model_dump_json(indent=2))
+
+    print(f"Scrape finished. Data saved to {output_file}")
 
 def main():
     # Define available configurations
     configs = {
         "epifanes_binnenvaart": {
             "base_url": "https://www.epifanes.nl/nl/onze-collecties/epifanes-binnenvaart",
+            "attribute_extractor": EpifanesAttributeExtractor(),
+            "file_extractor": EpifanesFileExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
                     list=CategoryListSelectors(
@@ -48,6 +73,7 @@ def main():
         },
         "epifanes_pleziervaart": {
             "base_url": "https://www.epifanes.nl/nl/onze-collecties/epifanes-pleziervaart",
+            "attribute_extractor": EpifanesAttributeExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
                     list=CategoryListSelectors(
@@ -158,35 +184,20 @@ def main():
         }
     }
 
-    # Determine site to scrape
-    site_key = "yachtpaint"  # default
+    # Determine site(s) to scrape (comment one)
+    site_key: str | None = "epifanes_binnenvaart"
+    # site_key: str | None = None
 
-    if len(sys.argv) > 1:
-        site_key = sys.argv[1]
+    if not site_key:
+        for key, selected in configs.items():
+            run_one(key, selected)
+        return
 
     if site_key not in configs:
         print(f"Unknown site: {site_key}. Available: {', '.join(configs.keys())}")
         return
 
-    print(f"Scraping site: {site_key}")
-    selected = configs[site_key]
-
-    # Instantiate the scraper
-    scraper = ConfigurableScraper(
-        base_url=selected["base_url"],
-        config=selected["config"],
-        headless=True
-    )
-
-    # Run the scraper
-    root_category = scraper.scrape()
-
-    # Save to JSON
-    output_file = f"output_{site_key}.json"
-    with open(output_file, "w") as f:
-        f.write(root_category.model_dump_json(indent=2))
-
-    print(f"Scrape finished. Data saved to {output_file}")
+    run_one(site_key, configs[site_key])
 
 
 if __name__ == "__main__":
