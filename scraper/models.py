@@ -14,9 +14,15 @@ class Product(BaseModel):
 class Category(BaseModel):
     name: str
     url: HttpUrl
+    description: Optional[str] = None
+    image: Optional[HttpUrl] = None
+
     subcategories: List['Category'] = []
-    products: List[Product] = []
+    products: List['Product'] = []
 
     class Config:
         # Needed for self-referencing model
         arbitrary_types_allowed = True
+
+
+Category.model_rebuild()

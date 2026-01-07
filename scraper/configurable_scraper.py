@@ -4,7 +4,7 @@ from urllib.parse import urljoin, urlparse
 from playwright.sync_api import Page
 
 from scraper.base import BaseScraper
-from scraper.config import ScraperConfig
+from scraper.config.base import ScraperConfig
 from scraper.models import Category, Product
 
 
@@ -77,7 +77,7 @@ class ConfigurableScraper(BaseScraper):
         categories: List[Category] = []
 
         # Shorthand the selectors config
-        selectors = self.config.category.selectors
+        selectors = self.config.category.list
 
         # Get all elements
         elements = page.query_selector_all(selectors.selector)
@@ -91,9 +91,33 @@ class ConfigurableScraper(BaseScraper):
                 raw=self._get_attr(el, selectors.url, 'href'),
             )
 
+            description = (
+                self._get_text(el, selectors.description)
+                if selectors.description
+                else None
+            )
+
+            raw_img = (
+                self._get_attr(el, selectors.image, "src")
+                if selectors.image
+                else None
+            )
+
+            image = (
+                self._process_url(
+                    base_url=self.config.category.processors.base_url,
+                    page_url=page.url,
+                    raw=raw_img,
+                )
+                if raw_img
+                else None
+            )
+
             category = Category(
                 name=name,
                 url=url,
+                description=description,
+                image=image,
             )
 
             categories.append(category)
@@ -105,7 +129,7 @@ class ConfigurableScraper(BaseScraper):
         products: List[Product] = []
 
         # Shorthand the selectors config
-        selectors = self.config.product.selectors
+        selectors = self.config.product.list
 
         # Get all elements
         elements = page.query_selector_all(selectors.selector)
