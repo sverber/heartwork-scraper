@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 from playwright.sync_api import sync_playwright, Page, Browser
 from playwright.sync_api import sync_playwright, Page, ElementHandle
 
-from scraper.models import Category, Product
+from scraper.models import Category, Product, ProductAttribute
 
 
 class BaseScraper(ABC):
@@ -78,4 +78,12 @@ class BaseScraper(ABC):
 
     @abstractmethod
     def get_products(self, page: Page) -> List[Product]:
+        pass
+
+    @abstractmethod
+    def enrich_product(self, product: Product) -> Product:
+        pass
+
+    @abstractmethod
+    def get_product_attributes(self, page: Page) -> List[ProductAttribute]:
         pass

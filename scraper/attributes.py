@@ -1,0 +1,11 @@
+from abc import ABC, abstractmethod
+from typing import List
+from playwright.sync_api import Page
+
+from scraper.models import ProductAttribute
+
+
+class ProductAttributeExtractor(ABC):
+    @abstractmethod
+    def extract(self, page: Page) -> List[ProductAttribute]:
+        ...

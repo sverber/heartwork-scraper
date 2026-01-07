@@ -4,6 +4,7 @@ from scraper.config.base import ScraperConfig
 from scraper.config.category import CategoryListSelectors, CategoryConfig, CategoryProcessors
 from scraper.config.product import ProductListSelectors, ProductDetailSelectors, ProductProcessors, ProductConfig
 from scraper.configurable_scraper import ConfigurableScraper
+from scraper.sites.epifanes_attributes import EpifanesAttributeExtractor
 
 
 def main():
@@ -11,6 +12,7 @@ def main():
     configs = {
         "epifanes_binnenvaart": {
             "base_url": "https://www.epifanes.nl/nl/onze-collecties/epifanes-binnenvaart",
+            "attribute_extractor": EpifanesAttributeExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
                     list=CategoryListSelectors(
@@ -48,6 +50,7 @@ def main():
         },
         "epifanes_pleziervaart": {
             "base_url": "https://www.epifanes.nl/nl/onze-collecties/epifanes-pleziervaart",
+            "attribute_extractor": EpifanesAttributeExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
                     list=CategoryListSelectors(
@@ -159,7 +162,7 @@ def main():
     }
 
     # Determine site to scrape
-    site_key = "yachtpaint"  # default
+    site_key = "epifanes_binnenvaart"  # default
 
     if len(sys.argv) > 1:
         site_key = sys.argv[1]
@@ -174,8 +177,9 @@ def main():
     # Instantiate the scraper
     scraper = ConfigurableScraper(
         base_url=selected["base_url"],
+        attribute_extractor=selected["attribute_extractor"],
         config=selected["config"],
-        headless=True
+        headless=False
     )
 
     # Run the scraper

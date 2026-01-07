@@ -1,17 +1,22 @@
 from typing import List, Set
-from urllib.parse import urljoin, urlparse
 
 from playwright.sync_api import Page
 
+from scraper.attributes import ProductAttributeExtractor
 from scraper.base import BaseScraper
 from scraper.config.base import ScraperConfig
-from scraper.models import Category, Product
+from scraper.models import Category, Product, ProductAttribute
 
 
 class ConfigurableScraper(BaseScraper):
-    def __init__(self, base_url: str, config: ScraperConfig, headless: bool = True):
+    def __init__(self,
+                 base_url: str, config: ScraperConfig,
+                 attribute_extractor: ProductAttributeExtractor | None = None,
+                 headless: bool = True
+                 ):
         super().__init__(base_url, headless)
         self.config = config
+        self.attribute_extractor = attribute_extractor
 
     def _scrape_impl(self) -> Category:
         self.visited_urls: Set[str] = set()
@@ -144,11 +149,55 @@ class ConfigurableScraper(BaseScraper):
                 raw=url,
             )
 
+            description = (
+                self._get_text(el, selectors.description)
+                if selectors.description
+                else None
+            )
+
+            raw_img = (
+                self._get_attr(el, selectors.image, "src")
+                if selectors.image
+                else None
+            )
+
+            image = (
+                self._process_url(
+                    base_url=self.config.category.processors.base_url,
+                    page_url=page.url,
+                    raw=raw_img,
+                )
+                if raw_img
+                else None
+            )
+
             product = Product(
                 name=name,
                 url=url,
+                description=description,
+                image=image,
             )
+
+            product = self.enrich_product(product)
 
             products.append(product)
 
         return products
+
+    def enrich_product(self, product: Product) -> Product:
+        # Open a new page
+        detail_page = self.browser.new_page()
+
+        # Go to the product detail page
+        detail_page.goto(str(product.url))
+
+        # Get the attributes
+        product.attributes = self.get_product_attributes(detail_page)
+
+        # Close the page when we're done
+        detail_page.close()
+
+        return product
+
+    def get_product_attributes(self, page: Page) -> List[ProductAttribute]:
+        return self.attribute_extractor.extract(page)
