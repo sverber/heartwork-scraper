@@ -13,33 +13,6 @@ class ConfigurableScraper(BaseScraper):
         super().__init__(base_url, headless)
         self.config = config
 
-    def _resolve_url(self, page_url: str, href: str) -> str:
-        # Resolve relative URLs
-        full_url = href if href.startswith("http") else f"{self.base_url.rstrip('/')}/{href.lstrip('/')}"
-
-        # A robust urljoin is better:
-        full_url = urljoin(page_url, href)
-
-        # Fix common URL issues: duplicate adjacent segments
-        # e.g. /onze-collecties/onze-collecties/ -> /onze-collecties/
-        parsed = urlparse(full_url)
-        path_segments = [s for s in parsed.path.split('/') if s]
-
-        new_segments = []
-        if path_segments:
-            new_segments.append(path_segments[0])
-            for i in range(1, len(path_segments)):
-                if path_segments[i] != path_segments[i - 1]:
-                    new_segments.append(path_segments[i])
-
-        # Reconstruct path
-        new_path = "/" + "/".join(new_segments)
-        # Preserve trailing slash if original had it
-        if parsed.path.endswith('/') and not new_path.endswith('/'):
-            new_path += "/"
-
-        return parsed._replace(path=new_path).geturl()
-
     def _scrape_impl(self) -> Category:
         self.visited_urls: Set[str] = set()
         page = self.browser.new_page()
@@ -72,6 +45,22 @@ class ConfigurableScraper(BaseScraper):
             # Let's use a new page context or just navigate.
             # Navigation is safer to specific URL.
             sub_url = str(subcat.url).rstrip('/')
+
+            # Scope check: Verify sub_url belongs to the same site/base path structure
+            # This is critical for sites like Yachtpaint where generic links (about, contact, other brands) 
+            # might share the same selector class.
+            if not sub_url.startswith(self.base_url) and "/products/" not in sub_url:
+                # Allow if it's strictly a product filter page we expect, e.g. international-yachtpaint.../products/...
+                # But generally we want to stay "under" the base or known paths.
+                # For now, let's enforce domain and language match if possible, or just base_url match if strict.
+                # Yachtpaint base: .../nl/nl/bootverf. Categories are .../nl/nl/products/filters/...
+                # So pure base_url startswith might be too strict if they jump to /products/.
+                # We'll check if it's at least the same domain.
+
+                from urllib.parse import urlparse
+                if urlparse(sub_url).netloc != urlparse(self.base_url).netloc:
+                    continue
+
             if sub_url in self.visited_urls:
                 continue
 
@@ -84,24 +73,58 @@ class ConfigurableScraper(BaseScraper):
                 print(f"Failed to traverse {subcat.url}: {e}")
 
     def get_categories(self, page: Page) -> List[Category]:
-        categories = []
-        # Use the config selector
-        elements = page.query_selector_all(self.config.category_selector)
+        # Store the categories
+        categories: List[Category] = []
+
+        # Shorthand the selectors config
+        selectors = self.config.category.selectors
+
+        # Get all elements
+        elements = page.query_selector_all(selectors.selector)
+
         for el in elements:
-            href = el.get_attribute("href")
-            name = el.inner_text().strip()
-            if href:
-                full_url = self._resolve_url(page.url, href)
-                categories.append(Category(name=name, url=full_url))
+            name = self._get_text(el, selectors.name)
+
+            url = self._process_url(
+                base_url=self.config.category.processors.base_url,
+                page_url=page.url,
+                raw=self._get_attr(el, selectors.url, 'href'),
+            )
+
+            category = Category(
+                name=name,
+                url=url,
+            )
+
+            categories.append(category)
+
         return categories
 
     def get_products(self, page: Page) -> List[Product]:
-        products = []
-        elements = page.query_selector_all(self.config.product_selector)
+        # Store the products
+        products: List[Product] = []
+
+        # Shorthand the selectors config
+        selectors = self.config.product.selectors
+
+        # Get all elements
+        elements = page.query_selector_all(selectors.selector)
+
         for el in elements:
-            href = el.get_attribute("href")
-            name = el.inner_text().strip()
-            if href:
-                full_url = self._resolve_url(page.url, href)
-                products.append(Product(name=name, url=full_url))
+            name = self._get_text(el, selectors.name)
+            url = self._get_attr(el, selectors.url, "href")
+
+            url = self._process_url(
+                base_url=self.config.product.processors.base_url,
+                page_url=page.url,
+                raw=url,
+            )
+
+            product = Product(
+                name=name,
+                url=url,
+            )
+
+            products.append(product)
+
         return products

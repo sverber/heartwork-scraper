@@ -1,5 +1,7 @@
 from typing import List, Optional
+
 from pydantic import BaseModel, HttpUrl
+
 
 class Product(BaseModel):
     name: str
@@ -7,6 +9,7 @@ class Product(BaseModel):
     price: Optional[str] = None
     description: Optional[str] = None
     # Add other fields as needed, e.g., images, sku, etc.
+
 
 class Category(BaseModel):
     name: str
@@ -17,5 +20,3 @@ class Category(BaseModel):
     class Config:
         # Needed for self-referencing model
         arbitrary_types_allowed = True
-
-Category.model_rebuild()
