@@ -127,8 +127,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# output artifacts
-output.json
+# Output data
+/output
 
 # .idea
 .idea
+

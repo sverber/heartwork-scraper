@@ -2,21 +2,24 @@ from typing import List, Set
 
 from playwright.sync_api import Page
 
-from scraper.attributes import ProductAttributeExtractor
 from scraper.base import BaseScraper
 from scraper.config.base import ScraperConfig
-from scraper.models import Category, Product, ProductAttribute
+from scraper.models.attributes import ProductAttributeExtractor
+from scraper.models.files import ProductFileExtractor
+from scraper.models.models import Category, Product, ProductAttribute, ProductFile
 
 
 class ConfigurableScraper(BaseScraper):
     def __init__(self,
                  base_url: str, config: ScraperConfig,
                  attribute_extractor: ProductAttributeExtractor | None = None,
+                 file_extractor: ProductFileExtractor | None = None,
                  headless: bool = True
                  ):
         super().__init__(base_url, headless)
         self.config = config
         self.attribute_extractor = attribute_extractor
+        self.file_extractor = file_extractor
 
     def _scrape_impl(self) -> Category:
         self.visited_urls: Set[str] = set()
@@ -194,10 +197,16 @@ class ConfigurableScraper(BaseScraper):
         # Get the attributes
         product.attributes = self.get_product_attributes(detail_page)
 
+        # Get the files
+        product.files = self.get_product_files(detail_page)
+
         # Close the page when we're done
         detail_page.close()
 
         return product
 
     def get_product_attributes(self, page: Page) -> List[ProductAttribute]:
-        return self.attribute_extractor.extract(page)
+        return self.attribute_extractor.extract(page) if self.attribute_extractor else []
+
+    def get_product_files(self, page: Page) -> List[ProductFile]:
+        return self.file_extractor.extract(page) if self.file_extractor else []

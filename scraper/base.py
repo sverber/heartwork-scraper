@@ -2,10 +2,9 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright, Page, Browser
-from playwright.sync_api import sync_playwright, Page, ElementHandle
+from playwright.sync_api import sync_playwright, Page, Browser, ElementHandle
 
-from scraper.models import Category, Product, ProductAttribute
+from scraper.models.models import Category, Product, ProductAttribute
 
 
 class BaseScraper(ABC):

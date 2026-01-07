@@ -3,8 +3,8 @@ from typing import List
 
 from playwright.sync_api import Page
 
-from scraper.attributes import ProductAttributeExtractor
-from scraper.models import ProductAttribute
+from scraper.models.attributes import ProductAttributeExtractor
+from scraper.models.models import ProductAttribute
 
 
 class EpifanesAttributeExtractor(ProductAttributeExtractor):
@@ -12,6 +12,7 @@ class EpifanesAttributeExtractor(ProductAttributeExtractor):
         attributes: List[ProductAttribute] = []
 
         container = page.query_selector("div[itemprop='description']")
+
         if not container:
             return attributes
 
