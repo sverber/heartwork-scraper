@@ -179,7 +179,6 @@ def main():
     )
 
     # Run the scraper
-    print("Starting scrape...")
     root_category = scraper.scrape()
 
     # Save to JSON
