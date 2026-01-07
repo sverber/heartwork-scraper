@@ -45,10 +45,3 @@ class EpifanesFileExtractor(ProductFileExtractor):
             )
 
         return files
-
-    def _infer_type(self, filename: str) -> str | None:
-        filename = filename.lower()
-        for ext in (".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"):
-            if filename.endswith(ext):
-                return ext.lstrip(".")
-        return None
