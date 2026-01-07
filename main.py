@@ -29,6 +29,7 @@ def run_one(site_key: str, selected: dict):
 
     print(f"Scrape finished. Data saved to {output_file}")
 
+
 def main():
     # Define available configurations
     configs = {
@@ -38,13 +39,15 @@ def main():
             "file_extractor": EpifanesFileExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
-                    list=CategoryListSelectors(
-                        selector="a.OneItem:not(.OneProduct)[href]",
-                        url=":scope",
-                        name="h2",
-                        description="p",
-                        image="img",
-                    ),
+                    lists=[
+                        CategoryListSelectors(
+                            selector="a.OneItem:not(.OneProduct)[href]",
+                            url=":scope",
+                            name="h2",
+                            description="p",
+                            image="img",
+                        )
+                    ],
                     detail=None,  # optional / unknown
                     processors=CategoryProcessors(
                         base_url="https://www.epifanes.nl/nl/"
@@ -58,7 +61,6 @@ def main():
                         description=".QuickInfo p:first-of-type",
                         image="img",
                     ),
-                    # @todo: product detail selector is not yet completed
                     detail=ProductDetailSelectors(
                         # placeholders until we inspect a product detail page
                         title="h1, h2[itemprop='name'], h1[itemprop='name']",
@@ -74,15 +76,18 @@ def main():
         "epifanes_pleziervaart": {
             "base_url": "https://www.epifanes.nl/nl/onze-collecties/epifanes-pleziervaart",
             "attribute_extractor": EpifanesAttributeExtractor(),
+            "file_extractor": EpifanesFileExtractor(),
             "config": ScraperConfig(
                 category=CategoryConfig(
-                    list=CategoryListSelectors(
-                        selector="a.OneItem:not(.OneProduct)[href]",
-                        url=":scope",
-                        name="h2",
-                        description="p",
-                        image="img",
-                    ),
+                    lists=[
+                        CategoryListSelectors(
+                            selector="a.OneItem:not(.OneProduct)[href]",
+                            url=":scope",
+                            name="h2",
+                            description="p",
+                            image="img",
+                        )
+                    ],
                     detail=None,  # optional / unknown
                     processors=CategoryProcessors(
                         base_url="https://www.epifanes.nl/nl/"
@@ -96,7 +101,6 @@ def main():
                         description=".QuickInfo p:first-of-type",
                         image="img",
                     ),
-                    # @todo: product detail selector is not yet completed
                     detail=ProductDetailSelectors(
                         # placeholders until we inspect a product detail page
                         title="h1, h2[itemprop='name'], h1[itemprop='name']",
@@ -111,15 +115,19 @@ def main():
         },
         "international_pc": {
             "base_url": "https://www.international-pc.com/en/product-category",
+            "attribute_extractor": None,  # @todo: build the custom attribute extractor
+            "file_extractor": None,  # @todo: build the custom file extractor
             "config": ScraperConfig(
                 category=CategoryConfig(
-                    list=CategoryListSelectors(
-                        selector="a.a2-text-link[href^='/en/products/filters/']",
-                        url=":scope",
-                        name=".text-link-label span",
-                        description=None,
-                        image=None,
-                    ),
+                    lists=[
+                        CategoryListSelectors(
+                            selector="a.a2-text-link[href^='/en/products/filters/']",
+                            url=":scope",
+                            name=".text-link-label span",
+                            description=None,
+                            image=None,
+                        )
+                    ],
                     detail=None,
                     processors=CategoryProcessors(
                         base_url="https://www.international-pc.com"
@@ -133,7 +141,6 @@ def main():
                         description=".product-description .js-camp-temp-text-color",
                         image=None,
                     ),
-                    # @todo: product detail selector is not yet completed
                     detail=ProductDetailSelectors(
                         # placeholders until we inspect a product detail page
                         title="h1, [itemprop='name'], .product-title",
@@ -148,15 +155,19 @@ def main():
         },
         "yachtpaint": {
             "base_url": "https://www.international-yachtpaint.com/nl/nl/bootverf",
+            "attribute_extractor": None,  # @todo: build the custom attribute extractor
+            "file_extractor": None,  # @todo: build the custom file extractor
             "config": ScraperConfig(
                 category=CategoryConfig(
-                    list=CategoryListSelectors(
-                        selector="a.a2-text-link[href^='/nl/nl/products/filters/']",
-                        url=":scope",
-                        name=".text-link-label span",
-                        description=None,
-                        image=None,
-                    ),
+                    lists=[
+                        CategoryListSelectors(
+                            selector="a.a2-text-link[href^='/nl/nl/products/filters/']",
+                            url=":scope",
+                            name=".text-link-label span",
+                            description=None,
+                            image=None,
+                        )
+                    ],
                     detail=None,
                     processors=CategoryProcessors(
                         base_url="https://www.international-yachtpaint.com"
@@ -170,7 +181,6 @@ def main():
                         description="p.product-description",
                         image="img.image-center",
                     ),
-                    # @todo: product detail selector is not yet completed
                     detail=ProductDetailSelectors(
                         title="h1",
                         description="[data-component*='product'] p, .product-description",
@@ -181,11 +191,58 @@ def main():
                     ),
                 ),
             )
-        }
+        },
+        "de-ijssel-coatings": {
+            "base_url": "https://www.de-ijssel-coatings.nl",
+            "attribute_extractor": None,  # @todo: build the custom attribute extractor
+            "file_extractor": None,  # @todo: build the custom file extractor
+            "config": ScraperConfig(
+                category=CategoryConfig(
+                    lists=[
+                        # Homepage
+                        CategoryListSelectors(
+                            selector="a.category-block[href]",
+                            url=":scope",
+                            name="p",
+                        ),
+                        # 2. Producten gateway
+                        CategoryListSelectors(
+                            selector="a[href$='/producten']:has(.page-tile .title:has-text('Producten'))",
+                            url=":scope",
+                            name=".page-tile .title",
+                        ),
+                        # 3. Product categories
+                        CategoryListSelectors(
+                            selector="div.products-tab#categories a[href*='/producten/categorie/']",
+                            url=":scope",
+                            name=".text-center",
+                            image="img",
+                        )
+                    ],
+                    processors=CategoryProcessors(
+                        base_url="https://www.de-ijssel-coatings.nl",
+                    ),
+                ),
+                product=ProductConfig(
+                    list=ProductListSelectors(
+                        selector="div.item-full",
+                        url=None,
+                        name=".title-small",
+                        description="div.description span.readmore[style*='display: none'], div.description span.readmore",
+                        image="img",
+                    ),
+                    detail=None,
+                    processors=ProductProcessors(
+                        base_url="https://www.de-ijssel-coatings.nl",
+                    ),
+                ),
+            )
+        },
     }
 
     # Determine site(s) to scrape (comment one)
-    site_key: str | None = "epifanes_binnenvaart"
+    # site_key: str | None = "epifanes_binnenvaart"
+    site_key: str | None = "de-ijssel-coatings"
     # site_key: str | None = None
 
     if not site_key:

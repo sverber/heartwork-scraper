@@ -81,54 +81,58 @@ class ConfigurableScraper(BaseScraper):
                 print(f"Failed to traverse {subcat.url}: {e}")
 
     def get_categories(self, page: Page) -> List[Category]:
-        # Store the categories
         categories: List[Category] = []
 
-        # Shorthand the selectors config
-        selectors = self.config.category.list
+        for selectors in self.config.category.lists:
+            elements = page.query_selector_all(selectors.selector)
 
-        # Get all elements
-        elements = page.query_selector_all(selectors.selector)
+            for el in elements:
+                name = self._get_text(el, selectors.name)
 
-        for el in elements:
-            name = self._get_text(el, selectors.name)
+                raw_url = self._get_attr(el, selectors.url, "href")
+                if not raw_url:
+                    continue
 
-            url = self._process_url(
-                base_url=self.config.category.processors.base_url,
-                page_url=page.url,
-                raw=self._get_attr(el, selectors.url, 'href'),
-            )
-
-            description = (
-                self._get_text(el, selectors.description)
-                if selectors.description
-                else None
-            )
-
-            raw_img = (
-                self._get_attr(el, selectors.image, "src")
-                if selectors.image
-                else None
-            )
-
-            image = (
-                self._process_url(
+                url = self._process_url(
                     base_url=self.config.category.processors.base_url,
                     page_url=page.url,
-                    raw=raw_img,
+                    raw=raw_url,
                 )
-                if raw_img
-                else None
-            )
 
-            category = Category(
-                name=name,
-                url=url,
-                description=description,
-                image=image,
-            )
+                # Deduplicate early
+                if not url or url.rstrip("/") in self.visited_urls:
+                    continue
 
-            categories.append(category)
+                description = (
+                    self._get_text(el, selectors.description)
+                    if selectors.description
+                    else None
+                )
+
+                raw_img = (
+                    self._get_attr(el, selectors.image, "src")
+                    if selectors.image
+                    else None
+                )
+
+                image = (
+                    self._process_url(
+                        base_url=self.config.category.processors.base_url,
+                        page_url=page.url,
+                        raw=raw_img,
+                    )
+                    if raw_img
+                    else None
+                )
+
+                categories.append(
+                    Category(
+                        name=name,
+                        url=url,
+                        description=description,
+                        image=image,
+                    )
+                )
 
         return categories
 
@@ -144,7 +148,13 @@ class ConfigurableScraper(BaseScraper):
 
         for el in elements:
             name = self._get_text(el, selectors.name)
-            url = self._get_attr(el, selectors.url, "href")
+
+            # If the product has no detail page (url selector), use the list view where the product is shown instead.
+            url = (
+                self._get_attr(el, selectors.url, "href")
+                if selectors.url
+                else page.url
+            )
 
             url = self._process_url(
                 base_url=self.config.product.processors.base_url,

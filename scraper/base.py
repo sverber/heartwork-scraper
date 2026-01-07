@@ -50,10 +50,13 @@ class BaseScraper(ABC):
         child = el.query_selector(selector)
         return child.inner_text().strip() if child else ""
 
-    def _process_url(self, base_url: str, page_url: str, raw: str) -> str:
+    def _process_url(self, base_url: str, page_url: str, raw: str or None) -> str | None:
         """
         Normalize href/src values into absolute URLs.
         """
+        if not raw:
+            return raw
+
         raw = (raw or "").strip()
         if not raw:
             return ""
