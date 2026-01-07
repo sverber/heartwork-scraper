@@ -142,7 +142,6 @@ def main():
                         image=None,
                     ),
                     detail=ProductDetailSelectors(
-                        # placeholders until we inspect a product detail page
                         title="h1, [itemprop='name'], .product-title",
                         description="[itemprop='description'], .product-description, main p",
                         image="img[itemprop='image'], img",
@@ -242,8 +241,8 @@ def main():
 
     # Determine site(s) to scrape (comment one)
     # site_key: str | None = "epifanes_binnenvaart"
-    site_key: str | None = "de-ijssel-coatings"
-    # site_key: str | None = None
+    # site_key: str | None = "de-ijssel-coatings"
+    site_key: str | None = None
 
     if not site_key:
         for key, selected in configs.items():
