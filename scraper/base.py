@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urljoin
 
@@ -8,11 +9,13 @@ from scraper.models.models import Category, Product, ProductAttribute
 
 
 class BaseScraper(ABC):
-    def __init__(self, base_url: str, headless: bool = True):
+    def __init__(self, base_url: str, headless: bool = True, output_path: Optional[Path] = None):
         self.base_url = base_url
         self.headless = headless
+        self.output_path = output_path  # Store where to save
         self.playwright = None
         self.browser = None
+        self.root_node = None
 
     def _setup(self):
         self.playwright = sync_playwright().start()
@@ -34,7 +37,14 @@ class BaseScraper(ABC):
         finally:
             self._teardown()
 
-    def _get_attr(self, el: ElementHandle, selector: str, attr: str) -> Optional[str]:
+    def save_checkpoint(self):
+        """Saves the current state of root_node to disk."""
+        if self.output_path and self.root_node:
+            self.output_path.write_text(self.root_node.model_dump_json(indent=2))
+            print(f"Saved checkpoint to: {self.output_path}")
+
+    @staticmethod
+    def _get_attr(el: ElementHandle, selector: str, attr: str) -> Optional[str]:
         """
         Reads attribute from a child matched by `selector` relative to `el`.
         Use ':scope' to read attribute from `el` itself.
@@ -45,12 +55,14 @@ class BaseScraper(ABC):
         child = el.query_selector(selector)
         return child.get_attribute(attr) if child else None
 
-    def _get_text(self, el: ElementHandle, selector: str) -> str:
+    @staticmethod
+    def _get_text(el: ElementHandle, selector: str) -> str:
         """Reads inner_text from a child matched by `selector` relative to `el`."""
         child = el.query_selector(selector)
         return child.inner_text().strip() if child else ""
 
-    def _process_url(self, base_url: str, page_url: str, raw: str or None) -> str | None:
+    @staticmethod
+    def _process_url(base_url: str, page_url: str, raw: str | None) -> str | None:
         """
         Normalize href/src values into absolute URLs.
         """

@@ -2,6 +2,8 @@ from typing import Optional, List
 
 from pydantic import BaseModel
 
+from scraper.config.pagination import PaginationConfig
+
 
 class CategoryListSelectors(BaseModel):
     selector: str
@@ -9,6 +11,7 @@ class CategoryListSelectors(BaseModel):
     name: str
     description: Optional[str] = None
     image: Optional[str] = None
+    pagination: Optional[PaginationConfig] = None
 
 
 class CategoryDetailSelectors(BaseModel):
