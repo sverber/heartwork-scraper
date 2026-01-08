@@ -94,6 +94,10 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
+    def get_product(self, page: Page) -> Product:
+        pass
+
+    @abstractmethod
     def enrich_product(self, product: Product) -> Product:
         pass
 

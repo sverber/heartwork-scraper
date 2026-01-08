@@ -273,7 +273,7 @@ class ConfigurableScraper(BaseScraper):
             return product
 
         detail_page = self.browser.new_page()
-        
+
         try:
             detail_page.goto(str(product.url))
             product.attributes = self.get_product_attributes(detail_page)
