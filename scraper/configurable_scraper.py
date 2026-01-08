@@ -32,7 +32,6 @@ class ConfigurableScraper(BaseScraper):
         page = self.browser.new_page()
         page.goto(self.base_url)
 
-        # Assign to self.root_node immediately so save_checkpoint() has a target
         self.root_node = Category(name="Root", url=self.base_url)
 
         self._traverse(page, self.root_node)
@@ -52,9 +51,6 @@ class ConfigurableScraper(BaseScraper):
         # 2. Get Products found on this page (handling pagination)
         products = self.get_products(page)
         current_category.products = products
-
-        # Always save after finishing a category level
-        self.save_checkpoint()
 
         # 3. Recurse into subcategories
         base_domain = urlparse(self.base_url).netloc
