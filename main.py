@@ -2,6 +2,7 @@ from pathlib import Path
 
 from scraper.config.base import ScraperConfig
 from scraper.config.category import CategoryListSelectors, CategoryConfig, CategoryProcessors
+from scraper.config.pagination import PaginationConfig
 from scraper.config.product import ProductListSelectors, ProductDetailSelectors, ProductProcessors, ProductConfig
 from scraper.configurable_scraper import ConfigurableScraper
 from scraper.sites.epifanes_attributes import EpifanesAttributeExtractor
@@ -11,21 +12,20 @@ from scraper.sites.epifanes_files import EpifanesFileExtractor
 def run_one(site_key: str, selected: dict):
     print(f"Scraping site: {site_key}")
 
+    output_dir = Path("output")
+    output_dir.mkdir(exist_ok=True)
+    output_file = output_dir / f"output_{site_key}.json"
+
     scraper = ConfigurableScraper(
         base_url=selected["base_url"],
         config=selected["config"],
         attribute_extractor=selected.get("attribute_extractor"),
         file_extractor=selected.get("file_extractor"),
         headless=True,
+        output_path=output_file,
     )
 
-    root_category = scraper.scrape()
-
-    output_dir = Path("output")
-    output_dir.mkdir(exist_ok=True)
-
-    output_file = output_dir / f"output_{site_key}.json"
-    output_file.write_text(root_category.model_dump_json(indent=2))
+    scraper.scrape()
 
     print(f"Scrape finished. Data saved to {output_file}")
 
@@ -140,6 +140,9 @@ def main():
                         name=".product-title .js-camp-temp-text-color",
                         description=".product-description .js-camp-temp-text-color",
                         image=None,
+                        pagination=PaginationConfig(
+                            selector=".m25-pagination",
+                        )
                     ),
                     detail=ProductDetailSelectors(
                         title="h1, [itemprop='name'], .product-title",
@@ -241,8 +244,9 @@ def main():
 
     # Determine site(s) to scrape (comment one)
     # site_key: str | None = "epifanes_binnenvaart"
+    site_key: str | None = "international_pc"
     # site_key: str | None = "de-ijssel-coatings"
-    site_key: str | None = None
+    # site_key: str | None = None
 
     if not site_key:
         for key, selected in configs.items():
