@@ -42,7 +42,7 @@ class ConfigurableScraper(BaseScraper):
         # Normalize the URL to prevent trailing slash duplicates
         curr_url = str(current_category.url).rstrip('/')
         self.visited_urls.add(curr_url)
-        print(f"Traversing [u]: {current_category.url}")
+        print(f"Traversing [c]: {current_category.url}")
 
         # 1. Get Subcategories found on this page
         subcategories = self.get_categories(page)
