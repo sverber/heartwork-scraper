@@ -9,6 +9,7 @@ from scraper.config.base import ScraperConfig
 from scraper.config.pagination import PaginationConfig
 from scraper.models.attributes import ProductAttributeExtractor
 from scraper.models.files import ProductFileExtractor
+from scraper.models.import_product import ImportProduct
 from scraper.models.models import Category, Product, ProductAttribute, ProductFile
 
 
@@ -182,6 +183,9 @@ class ConfigurableScraper(BaseScraper):
         products: List[Product] = []
         selectors = self.config.product.list
 
+        if page.url == 'https://www.de-ijssel-coatings.nl/nl/watersport/producten/categorie/double-coat':
+            debug = True
+
         pages_to_scrape = [page.url]
         scraped_pagination_urls = set()
 
@@ -213,13 +217,16 @@ class ConfigurableScraper(BaseScraper):
                     page_url=page.url,
                     raw=raw_url,
                 )
-                norm_url = url.rstrip('/')
 
-                # Global deduplication: don't scrape product details if we've seen this URL before
-                if norm_url in self.visited_urls or any(p.url == url for p in products):
+                # Global deduplication: don't scrape product details if we've seen this URL before (there is a detail page)
+                product_detail_visited = url in self.visited_urls or any(p.url == url for p in products)
+                product_detail_exists = self.config.product.detail is not None
+
+                if product_detail_visited and product_detail_exists:
                     continue
 
                 image = None
+
                 if selectors.image:
                     raw_img = self._get_attr(el, selectors.image, "src")
                     image = self._process_url(
@@ -239,7 +246,7 @@ class ConfigurableScraper(BaseScraper):
                 product = self.enrich_product(product)
 
                 # Add to global visited list AFTER enrichment so it's fully processed
-                self.visited_urls.add(norm_url)
+                self.visited_urls.add(url)
                 products.append(product)
 
             # Discover pagination links
@@ -249,6 +256,8 @@ class ConfigurableScraper(BaseScraper):
                     if p_url.rstrip('/') not in scraped_pagination_urls:
                         pages_to_scrape.append(p_url)
 
+        print(f'Found {len(products)} products at url {page.url}')
+
         return products
 
     def get_product_attributes(self, page: Page) -> List[ProductAttribute]:
@@ -257,8 +266,27 @@ class ConfigurableScraper(BaseScraper):
     def get_product_files(self, page: Page) -> List[ProductFile]:
         return self.file_extractor.extract(page) if self.file_extractor else []
 
+    # def enrich_product(self, product: Product) -> Product:
+    #     # We use a context manager pattern to ensure pages close even on failure
+    #     detail_page = self.browser.new_page()
+    #     try:
+    #         detail_page.goto(str(product.url))
+    #         product.attributes = self.get_product_attributes(detail_page)
+    #         product.files = self.get_product_files(detail_page)
+    #     finally:
+    #         detail_page.close()
+    #
+    #     return product
+
     def enrich_product(self, product: Product) -> Product:
-        # We use a context manager pattern to ensure pages close even on failure
+        # If there is no detail config OR no product URL, skip opening a new page
+        if not self.config.product.detail or not product.url:
+            return product
+
+        # Check if the product URL is just the category page (edge case)
+        if str(product.url).rstrip('/') == str(self.browser.contexts[0].pages[-1].url).rstrip('/'):
+            return product
+
         detail_page = self.browser.new_page()
         try:
             detail_page.goto(str(product.url))

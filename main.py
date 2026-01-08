@@ -244,9 +244,9 @@ def main():
 
     # Determine site(s) to scrape (comment one)
     # site_key: str | None = "epifanes_binnenvaart"
-    site_key: str | None = "international_pc"
+    # site_key: str | None = "international_pc"
     # site_key: str | None = "de-ijssel-coatings"
-    # site_key: str | None = None
+    site_key: str | None = None
 
     if not site_key:
         for key, selected in configs.items():
