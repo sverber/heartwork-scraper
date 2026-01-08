@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -22,6 +22,6 @@ class CategoryProcessors(BaseModel):
 
 
 class CategoryConfig(BaseModel):
-    list: CategoryListSelectors
+    lists: List[CategoryListSelectors]
     detail: Optional[CategoryDetailSelectors] = None
     processors: CategoryProcessors

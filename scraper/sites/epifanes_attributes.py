@@ -37,11 +37,15 @@ class EpifanesAttributeExtractor(ProductAttributeExtractor):
 
             value = re.sub(r"\s+", " ", raw_value)
 
+            # @todo: optional, add class to separate individual attributes
+
             attributes.append(
                 ProductAttribute(
                     name=name,
                     values=[value],
                 )
             )
+
+
 
         return attributes
