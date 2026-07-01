@@ -7,6 +7,12 @@ from scraper.config.product import ProductListSelectors, ProductDetailSelectors,
 from scraper.configurable_scraper import ConfigurableScraper
 from scraper.sites.epifanes_attributes import EpifanesAttributeExtractor
 from scraper.sites.epifanes_files import EpifanesFileExtractor
+from scraper.sites import radiushdd
+
+
+def run_radiushdd():
+    output = Path("output") / "radiushdd_custom_subs.csv"
+    radiushdd.scrape(output_path=output, headless=True)
 
 
 def run_one(site_key: str, selected: dict):
@@ -47,6 +53,7 @@ def main():
                             name="p",
                         ),
                         # 2. Producten gateway
+                        # @todo: add flag to ignore a specific "category" or step like this.
                         CategoryListSelectors(
                             selector="a[href$='/producten']:has(.page-tile .title:has-text('Producten'))",
                             url=":scope",
@@ -245,8 +252,13 @@ def main():
     # Determine site(s) to scrape (comment one)
     # site_key: str | None = "epifanes_binnenvaart"
     # site_key: str | None = "international_pc"
-    site_key: str | None = "de-ijssel-coatings"
+    # site_key: str | None = "de-ijssel-coatings"
+    site_key: str | None = "radiushdd"
     # site_key: str | None = None
+
+    if site_key == "radiushdd":
+        run_radiushdd()
+        return
 
     if not site_key:
         for key, selected in configs.items():
