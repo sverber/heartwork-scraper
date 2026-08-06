@@ -41,7 +41,6 @@ class BaseScraper(ABC):
         """Saves the current state of root_node to disk."""
         if self.output_path and self.root_node:
             self.output_path.write_text(self.root_node.model_dump_json(indent=2))
-            print(f"Saved checkpoint to: {self.output_path}")
 
     @staticmethod
     def _get_attr(el: ElementHandle, selector: str, attr: str) -> Optional[str]:
@@ -92,6 +91,10 @@ class BaseScraper(ABC):
 
     @abstractmethod
     def get_products(self, page: Page) -> List[Product]:
+        pass
+
+    @abstractmethod
+    def get_product(self, page: Page) -> Product:
         pass
 
     @abstractmethod

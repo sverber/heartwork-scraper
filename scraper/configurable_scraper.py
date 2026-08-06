@@ -9,6 +9,7 @@ from scraper.config.base import ScraperConfig
 from scraper.config.pagination import PaginationConfig
 from scraper.models.attributes import ProductAttributeExtractor
 from scraper.models.files import ProductFileExtractor
+from scraper.models.import_product import ImportProduct
 from scraper.models.models import Category, Product, ProductAttribute, ProductFile
 
 
@@ -181,7 +182,6 @@ class ConfigurableScraper(BaseScraper):
     def get_products(self, page: Page) -> List[Product]:
         products: List[Product] = []
         selectors = self.config.product.list
-
         pages_to_scrape = [page.url]
         scraped_pagination_urls = set()
 
@@ -197,50 +197,12 @@ class ConfigurableScraper(BaseScraper):
                 print(f"Traversing [p]: {current_url}")
 
             scraped_pagination_urls.add(norm_p_url)
-
             elements = page.query_selector_all(selectors.selector)
 
             for el in elements:
-                name = self._get_text(el, selectors.name)
-
-                # If no specific URL selector, assume it's the current page
-                raw_url = self._get_attr(el, selectors.url, "href") if selectors.url else page.url
-                if not raw_url:
-                    continue
-
-                url = self._process_url(
-                    base_url=self.config.product.processors.base_url,
-                    page_url=page.url,
-                    raw=raw_url,
-                )
-                norm_url = url.rstrip('/')
-
-                # Global deduplication: don't scrape product details if we've seen this URL before
-                if norm_url in self.visited_urls or any(p.url == url for p in products):
-                    continue
-
-                image = None
-                if selectors.image:
-                    raw_img = self._get_attr(el, selectors.image, "src")
-                    image = self._process_url(
-                        base_url=self.config.product.processors.base_url,
-                        page_url=page.url,
-                        raw=raw_img
-                    )
-
-                product = Product(
-                    name=name,
-                    url=url,
-                    description=self._get_text(el, selectors.description) if selectors.description else None,
-                    image=image,
-                )
-
-                # Enrichment opens the detail page for attributes and files
-                product = self.enrich_product(product)
-
-                # Add to global visited list AFTER enrichment so it's fully processed
-                self.visited_urls.add(norm_url)
-                products.append(product)
+                product = self.get_product(el, page)
+                if product:
+                    products.append(product)
 
             # Discover pagination links
             if hasattr(selectors, 'pagination') and selectors.pagination and selectors.pagination.selector:
@@ -251,6 +213,50 @@ class ConfigurableScraper(BaseScraper):
 
         return products
 
+    def get_product(self, el, page: Page) -> Optional[Product]:
+        selectors = self.config.product.list
+        name = self._get_text(el, selectors.name)
+
+        # If no specific URL selector (like de-ijssel), use the current category page URL
+        raw_url = self._get_attr(el, selectors.url, "href") if selectors.url else page.url
+        if not raw_url:
+            return None
+
+        url = self._process_url(
+            base_url=self.config.product.processors.base_url,
+            page_url=page.url,
+            raw=raw_url,
+        )
+
+        # Deduplication logic
+        # Only skip if a detail page exists and we've already visited that specific detail URL
+        product_detail_exists = self.config.product.detail is not None
+        if product_detail_exists and (url in self.visited_urls):
+            return None
+
+        image = None
+        if selectors.image:
+            raw_img = self._get_attr(el, selectors.image, "src")
+            image = self._process_url(
+                base_url=self.config.product.processors.base_url,
+                page_url=page.url,
+                raw=raw_img
+            )
+
+        product = Product(
+            name=name,
+            url=url,
+            description=self._get_text(el, selectors.description) if selectors.description else None,
+            image=image,
+        )
+
+        # Only attempt enrichment (opening detail page) if a detail config is provided
+        if product_detail_exists:
+            product = self.enrich_product(product)
+            self.visited_urls.add(url)
+
+        return product
+
     def get_product_attributes(self, page: Page) -> List[ProductAttribute]:
         return self.attribute_extractor.extract(page) if self.attribute_extractor else []
 
@@ -258,8 +264,16 @@ class ConfigurableScraper(BaseScraper):
         return self.file_extractor.extract(page) if self.file_extractor else []
 
     def enrich_product(self, product: Product) -> Product:
-        # We use a context manager pattern to ensure pages close even on failure
+        # If there is no detail config OR no product URL, skip opening a new page
+        if not self.config.product.detail or not product.url:
+            return product
+
+        # Check if the product URL is just the category page (edge case)
+        if str(product.url).rstrip('/') == str(self.browser.contexts[0].pages[-1].url).rstrip('/'):
+            return product
+
         detail_page = self.browser.new_page()
+
         try:
             detail_page.goto(str(product.url))
             product.attributes = self.get_product_attributes(detail_page)
